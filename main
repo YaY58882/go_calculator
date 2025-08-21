@@ -1,0 +1,56 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+)
+
+func main() {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("ENTER A NUMBER: ")
+	firstInput, _ := reader.ReadString('\n')
+	firstInput = strings.TrimSpace(firstInput)
+	firstNumber, err := strconv.ParseFloat(firstInput, 64)
+	if err != nil {
+		fmt.Println("Invalid number for first input.")
+		return
+	}
+
+	fmt.Print("ENTER AN OPERATOR (+, -, *, /): ")
+	operator, _ := reader.ReadString('\n')
+	operator = strings.TrimSpace(operator)
+
+	fmt.Print("ENTER ANOTHER NUMBER: ")
+	secondInput, _ := reader.ReadString('\n')
+	secondInput = strings.TrimSpace(secondInput)
+	secondNumber, err := strconv.ParseFloat(secondInput, 64)
+	if err != nil {
+		fmt.Println("Invalid number for second input.")
+		return
+	}
+
+	var result float64
+
+	switch operator {
+	case "+":
+		result = firstNumber + secondNumber
+	case "-":
+		result = firstNumber - secondNumber
+	case "*":
+		result = firstNumber * secondNumber
+	case "/":
+		if secondNumber == 0 {
+			fmt.Println("Error: Division by zero is not allowed.")
+			return
+		}
+		result = firstNumber / secondNumber
+	default:
+		fmt.Println("Error: Invalid operator. Please use +, -, *, or /.")
+		return
+	}
+	fmt.Printf("Result: %.2f %s %.2f = %.2f\n", firstNumber, operator, secondNumber, result)
+}
