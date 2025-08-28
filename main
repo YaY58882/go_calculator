@@ -1,56 +1,68 @@
 package main
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
-	"os"
+	"net/http"
 	"strconv"
-	"strings"
 )
 
+type CalculationRequest struct {
+	First    string `json:"first"`
+	Operator string `json:"operator"`
+	Second   string `json:"second"`
+}
+
+type CalculationResponse struct {
+	Result string `json:"result"`
+	Error  string `json:"error,omitempty"`
+}
+
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	http.Handle("/", http.FileServer(http.Dir("./static")))
 
-	fmt.Print("ENTER A NUMBER: ")
-	firstInput, _ := reader.ReadString('\n')
-	firstInput = strings.TrimSpace(firstInput)
-	firstNumber, err := strconv.ParseFloat(firstInput, 64)
-	if err != nil {
-		fmt.Println("Invalid number for first input.")
-		return
-	}
-
-	fmt.Print("ENTER AN OPERATOR (+, -, *, /): ")
-	operator, _ := reader.ReadString('\n')
-	operator = strings.TrimSpace(operator)
-
-	fmt.Print("ENTER ANOTHER NUMBER: ")
-	secondInput, _ := reader.ReadString('\n')
-	secondInput = strings.TrimSpace(secondInput)
-	secondNumber, err := strconv.ParseFloat(secondInput, 64)
-	if err != nil {
-		fmt.Println("Invalid number for second input.")
-		return
-	}
-
-	var result float64
-
-	switch operator {
-	case "+":
-		result = firstNumber + secondNumber
-	case "-":
-		result = firstNumber - secondNumber
-	case "*":
-		result = firstNumber * secondNumber
-	case "/":
-		if secondNumber == 0 {
-			fmt.Println("Error: Division by zero is not allowed.")
+	http.HandleFunc("/calculate", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		result = firstNumber / secondNumber
-	default:
-		fmt.Println("Error: Invalid operator. Please use +, -, *, or /.")
-		return
-	}
-	fmt.Printf("Result: %.2f %s %.2f = %.2f\n", firstNumber, operator, secondNumber, result)
+
+		var req CalculationRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		firstNumber, err1 := strconv.ParseFloat(req.First, 64)
+		secondNumber, err2 := strconv.ParseFloat(req.Second, 64)
+
+		if err1 != nil || err2 != nil {
+			json.NewEncoder(w).Encode(CalculationResponse{Error: "Invalid number"})
+			return
+		}
+
+		var result float64
+		switch req.Operator {
+		case "+":
+			result = firstNumber + secondNumber
+		case "-":
+			result = firstNumber - secondNumber
+		case "*":
+			result = firstNumber * secondNumber
+		case "/":
+			if secondNumber == 0 {
+				json.NewEncoder(w).Encode(CalculationResponse{Error: "Division by zero"})
+				return
+			}
+			result = firstNumber / secondNumber
+		default:
+			json.NewEncoder(w).Encode(CalculationResponse{Error: "Invalid operator"})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(CalculationResponse{Result: fmt.Sprintf("%.2f", result)})
+	})
+	http.ListenAndServe(":http://127.0.0.1:5500/", nil)
 }
